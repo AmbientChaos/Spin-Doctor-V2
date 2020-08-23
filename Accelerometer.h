@@ -63,7 +63,7 @@ void getAccel(int16_t& xAccel, int16_t& yAccel, int16_t& zAccel){
   // read axis output values from accelerometer
   // actually 12 bit int but left justified (2048 gradations per direction)
   
-  uint8_t data[6];
+  static uint8_t data[6];
   static uint32_t xSum = 0;
   static uint8_t xCount = 0;
   
@@ -110,9 +110,6 @@ void runAccel(){
   
   //get new data
   getAccel(xAccel, yAccel, zAccel);
-
-  //calculate rotation speed(period) from telemetry
-  //degreePeriod[0] = (accelCalA * exp(((double)zAccel / accelCalB)) + accelCalC); 
 
   //determine current orientation
   if(xAccel >= 0) flipped = 1;
