@@ -6,15 +6,18 @@ uint16_t throtCurrent = 0;
 uint16_t movementDirection = 0;
 uint16_t movementSpeed = 0;
 bool maxSpin = false;
+bool calibrating = false;
+uint16_t telemAngle[arraySize] = {0}; //current angle calculated from accelerometer
 
 //manually calibrated variables
-uint16_t throtMin = 100; // minimum throttle to start spinning, out of 1000
-uint16_t throtMax = 500; // maximum throttle for melty mode, out of 1000
-uint16_t lightOffset = 50; //angle between lights and "front", which is 90 deg offset from the motor axle
+const uint16_t throtMin = 100; // minimum throttle to start spinning, out of 1000
+const uint16_t throtMax = 400; // maximum throttle for melty mode, out of 1000
+const uint16_t lightOffset = 45; //angle between lights and "front", which is 90 deg offset from the motor axle
 
 uint16_t currentAngle = 0;
 unsigned long lastMotor1Send = micros();
 unsigned long lastMotor2Send = micros();
+unsigned long trimTimer = millis();
 
 //define pins
 #define GREEN 23
@@ -22,16 +25,27 @@ unsigned long lastMotor2Send = micros();
 
 //juke variables
 bool jukeFinished = true;
-uint16_t jukeTurnTime = 100; // turn time in msec
-uint16_t jukeDriveTime = 500; // drive time in msec
+const uint16_t jukeTurnTime = 100; // turn time in msec
+const uint16_t jukeDriveTime = 500; // drive time in msec
 unsigned long jukeStartTime = millis();
 
 void trimAngle(Receiver r) {
   //use rudder to rotate heading direction
-  int16_t angleTrim;
-  angleTrim = (r.rudd - 500) / 200;
-  for (int i = 0; i < arraySize; i++) {
+  static int16_t angleTrim;
+  if (millis() - trimTimer > 25) {
+    trimTimer = millis();
+    angleTrim = (r.rudd - 500) / 100;
+  }
+  for (static int i = 0; i < arraySize; i++) {
     telemAngle[i] = (telemAngle[i] + angleTrim) % 360;
+  }
+}
+
+void calibrateSpeed(Receiver r){
+  if (millis() - trimTimer > 250) {
+    trimTimer = millis();
+    if (r.rudd >= 750) periodOffset--;
+    else if (r.rudd <= 250) periodOffset++;
   }
 }
 
@@ -42,33 +56,34 @@ void getRadial(Receiver r) {
     movementSpeed = min(500, (int)hypot(r.ailer - 500, r.elev - 500));
     movementDirection = (atan2((r.ailer - 500) * flipped, r.elev - 500) * 4068) / 71; //deg = rad * 4068 / 71
     throtCurrent = maxSpin ? 1000 : (uint32_t) r.throt * throtMax / 1000;
-    trimAngle(r);
+    if (calibrating) calibrateSpeed(r);
+    else trimAngle(r);
   }
 }
 
 void getAngle() { 
   //triangular integration calculations borrowed from Halo
+  static uint16_t deltaT;
   //calculate angle from new telem data
   if (telemNew) { 
     telemNew = false;
     
     //shift old data down
-    for (int i = 1; i < arraySize; i++) { 
+    for (static int i = 1; i < arraySize; i++) { 
       telemAngle[i] = telemAngle[i - 1];
     }
     
     //triangular integration from new data
-    uint16_t deltaT = telemTime[0] - telemTime[1];
+    deltaT = telemTime[0] - telemTime[1];
     telemAngle[0] = (telemAngle[1] + (deltaT / degreePeriod[0] + deltaT / degreePeriod[1]) / 2) % 360;
     currentAngle = telemAngle[0];
   }
   //predict the angle between telem readings by extrapolating from old data
   else { 
-    uint16_t newTime = micros();
-    uint16_t periodPredicted = degreePeriod[1] + (newTime - telemTime[1]) 
-        * (degreePeriod[0] - degreePeriod[1]) / (telemTime[0] - telemTime[1]);
+    static uint16_t newTime = micros();
+    static uint16_t periodPredicted = degreePeriod[1] + (newTime - telemTime[1]) * (degreePeriod[0] - degreePeriod[1]) / (telemTime[0] - telemTime[1]);
     //predict the current robot heading by triangular integration up to the extrapolated point
-    uint16_t deltaT = newTime - telemTime[0];
+    deltaT = newTime - telemTime[0];
     currentAngle = (telemAngle[0] + (deltaT / periodPredicted + deltaT / degreePeriod[0]) / 2) % 360;
   }
 }
@@ -85,7 +100,7 @@ void meltLights() {
   //turn on red ligth if its position is in the stick direction
   if (movementSpeed > 50) {
     if ((currentAngle + lightOffset) % 360 <= (movementDirection + 10) % 360 
-        && (currentAngle + lightOffset) % 360 >= (movementDirection - 10) % 360) {
+        || (currentAngle + lightOffset) % 360 >= (movementDirection - 10) % 360) {
       digitalWrite(RED, HIGH);
     }
     else {
@@ -119,7 +134,7 @@ void drive(Receiver r) {
 }
 
 void juke(Receiver r){
-  unsigned long jukeTime = millis() - jukeStartTime;
+  static unsigned long jukeTime = millis() - jukeStartTime;
   if (jukeTime <= jukeTurnTime) r.ailer = 1000;
   else if (jukeTime <= jukeDriveTime) {
     r.ailer = 500;
@@ -140,13 +155,13 @@ void meltMove() {
     diff = 180 - abs(abs(movementDirection - currentAngle) - 180);
     //speed up motor if moving toward movement direction
     if (diff < 90) {
-      setMotor(flipped * (throtCurrent + 200), 1);
-      setMotor(flipped * (throtCurrent - 200), 2);
+      setMotor(flipped * (throtCurrent), 1);
+      setMotor(flipped * (max(throtCurrent - 200,0)), 2);
     }
     //slow down motor if moving away from movement direction
     else {
-      setMotor(flipped * (throtCurrent - 200), 1);
-      setMotor(flipped * (throtCurrent + 200), 2);
+      setMotor(flipped * (max(throtCurrent - 200,0)), 1);
+      setMotor(flipped * (throtCurrent), 2);
     }
   }
   //spin in place if no stick movement
@@ -158,7 +173,7 @@ void meltMove() {
 
 void runMelty(Receiver r) {
   getRadial(r);
-  receiveTelemetry();
+  //receiveTelemetry();
 
   //run melty if throttle is high enough
   if (throtCurrent >= throtMin) {
