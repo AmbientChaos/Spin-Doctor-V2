@@ -11,17 +11,18 @@ uint16_t telemAngle[arraySize] = {0}; //current angle calculated from accelerome
 
 //manually calibrated variables
 const uint16_t throtMin = 100; // minimum throttle to start spinning, out of 1000
-const uint16_t throtMax = 400; // maximum throttle for melty mode, out of 1000
+const uint16_t throtMax = 300; // maximum throttle for melty mode, out of 1000
 const uint16_t lightOffset = 45; //angle between lights and "front", which is 90 deg offset from the motor axle
 
 uint16_t currentAngle = 0;
 unsigned long lastMotor1Send = micros();
 unsigned long lastMotor2Send = micros();
+unsigned long telemDelay = micros();
 unsigned long trimTimer = millis();
 
 //define pins
-#define GREEN 23
-#define RED 22
+#define GREEN 4
+#define RED 6
 
 //juke variables
 bool jukeFinished = true;
@@ -29,35 +30,35 @@ const uint16_t jukeTurnTime = 100; // turn time in msec
 const uint16_t jukeDriveTime = 500; // drive time in msec
 unsigned long jukeStartTime = millis();
 
-void trimAngle(Receiver r) {
+void trimAngle() {
   //use rudder to rotate heading direction
   static int16_t angleTrim;
   if (millis() - trimTimer > 25) {
     trimTimer = millis();
-    angleTrim = (r.rudd - 500) / 100;
+    angleTrim = (rudd - 500) / 100;
   }
   for (static int i = 0; i < arraySize; i++) {
-    telemAngle[i] = (telemAngle[i] + angleTrim) % 360;
+    telemAngle[i] = (telemAngle[i] + 360 + angleTrim) % 360;
   }
 }
 
-void calibrateSpeed(Receiver r){
-  if (millis() - trimTimer > 250) {
+void calibrateSpeed(){
+  if (millis() - trimTimer > 330) {
     trimTimer = millis();
-    if (r.rudd >= 750) periodOffset--;
-    else if (r.rudd <= 250) periodOffset++;
+    if (rudd >= 750) periodOffset--;
+    else if (rudd <= 250) periodOffset++;
   }
 }
 
-void getRadial(Receiver r) {
+void getRadial() {
   //calculate melty inputs from receiver
-  if (r.newInput) { 
-    r.newInput = false;
-    movementSpeed = min(500, (int)hypot(r.ailer - 500, r.elev - 500));
-    movementDirection = (atan2((r.ailer - 500) * flipped, r.elev - 500) * 4068) / 71; //deg = rad * 4068 / 71
-    throtCurrent = maxSpin ? 1000 : (uint32_t) r.throt * throtMax / 1000;
-    if (calibrating) calibrateSpeed(r);
-    else trimAngle(r);
+  if (newInput) { 
+    newInput = false;
+    movementSpeed = min(500, (int)hypot(ailer - 500, elev - 500));
+    movementDirection = (atan2((ailer - 500) * flipped, elev - 500) * 4068) / 71; //deg = rad * 4068 / 71
+    throtCurrent = maxSpin ? 1000 : (uint32_t) throt * throtMax / 1000;
+    if (calibrating) calibrateSpeed();
+    else trimAngle();
   }
 }
 
@@ -90,62 +91,77 @@ void getAngle() {
 
 void meltLights() {
   //turn on green light if it's position is "forward"
-  if ((currentAngle + lightOffset) % 360 <= 10 
-      || (currentAngle + lightOffset) % 360 >= 350) {
-    digitalWrite(GREEN, HIGH);
+  if ((currentAngle + 360 + lightOffset) % 360 <= 30 
+      || (currentAngle + 360 + lightOffset) % 360 >= 330) {
+    digitalWriteFast(GREEN, HIGH);
   }
   else {
-    digitalWrite(GREEN, LOW);
+    digitalWriteFast(GREEN, LOW);
   }
+  /*if ((currentAngle + 360 + lightOffset) % 360 <= 45 
+      || (currentAngle + 360 + lightOffset) % 360 >= 315) {
+    digitalWriteFast(RED, HIGH);
+  }
+  else {
+    digitalWriteFast(RED, LOW);
+  }*/
   //turn on red ligth if its position is in the stick direction
   if (movementSpeed > 50) {
-    if ((currentAngle + lightOffset) % 360 <= (movementDirection + 10) % 360 
-        || (currentAngle + lightOffset) % 360 >= (movementDirection - 10) % 360) {
-      digitalWrite(RED, HIGH);
+    if ((currentAngle + 360 + lightOffset) % 360 <= (movementDirection + 30) % 360 
+        || (currentAngle + 360 + lightOffset) % 360 >= (movementDirection - 30) % 360) {
+      digitalWriteFast(RED, HIGH);
     }
     else {
-      digitalWrite(RED, LOW);
+      digitalWriteFast(RED, LOW);
     }
   }
 }
 
 void setMotor(int16_t value, uint8_t motor = 1) {
   //send DShot command based on -1000 to 1000 throttle input
-  //ESC is expected to be flashed to be in Bidirectional 3D mode
   //limit max update rate to 4kHz, min 25us between motors
-  if (((motor == 1) && (micros() - lastMotor1Send >= 250) &&(micros() - lastMotor2Send >= 25)) 
-    ||((motor == 2) && (micros() - lastMotor2Send >= 250) &&(micros() - lastMotor1Send >= 25))) { 
-    if(value == 0) dshotOut(value, motor);
-    else {
-      if(value > 0) dshotOut(value * 1 + 1047, motor);
-      else if(value < 0) dshotOut(value * -1 + 47, motor);
+  static bool telem = false;
+  if (((motor == 1) && (micros() - lastMotor1Send >= 250) &&(micros() - lastMotor2Send >= 30)) 
+    ||((motor == 2) && (micros() - lastMotor2Send >= 250) &&(micros() - lastMotor1Send >= 30))) { 
+    if (motor == 1 && micros() - telemDelay > 900) {
+      telemDelay = micros();
+      telem = true;
     }
-    if(motor == 1) lastMotor1Send = micros();
-    else if(motor == 2) lastMotor2Send = micros();
+    if(value == 0) {}
+    else if(value > 0) {value = value * 1 + 1047;}
+    else if(value < 0) {value = value * -1 + 47;}
+    else {value = 0;}
+    dshotOut(value, motor, telem);
+    telem = false;
+    if(motor == 1) {lastMotor1Send = micros();}
+    else if(motor == 2) {lastMotor2Send = micros();}
   }
+  else {return;}
 }
 
-void drive(Receiver r) {
-  digitalWrite(GREEN, HIGH);
-  if (r.throt > 500) digitalWrite(RED, HIGH);
-  else digitalWrite(RED, LOW);
-  setMotor(flipped * (r.elev + r.ailer - 1000), 1);
-  setMotor(flipped * (r.elev - r.ailer), 2);
+void drive() {
+  digitalWriteFast(GREEN, HIGH);
+  if (throt > 500) digitalWriteFast(RED, HIGH);
+  else digitalWriteFast(RED, LOW);
+  if (elev < 520 && elev > 480) elev = 500;
+  if (ailer < 520 && ailer > 480) ailer = 500;
+  setMotor(flipped * (elev + ailer - 1000), 1);
+  setMotor(flipped * (elev - ailer), 2);
 }
 
-void juke(Receiver r){
+void juke(){
   static unsigned long jukeTime = millis() - jukeStartTime;
-  if (jukeTime <= jukeTurnTime) r.ailer = 1000;
+  if (jukeTime <= jukeTurnTime) ailer = 1000;
   else if (jukeTime <= jukeDriveTime) {
-    r.ailer = 500;
-    r.elev = 1000;
+    ailer = 500;
+    elev = 1000;
   }
   else {
-    r.ailer = 500;
-    r.elev = 500;
+    ailer = 500;
+    elev = 500;
     jukeFinished = true;
   }
-  drive(r);
+  drive();
 }
 
 void meltMove() {
@@ -156,11 +172,11 @@ void meltMove() {
     //speed up motor if moving toward movement direction
     if (diff < 90) {
       setMotor(flipped * (throtCurrent), 1);
-      setMotor(flipped * (max(throtCurrent - 200,0)), 2);
+      setMotor(flipped * (throtCurrent * 8 / 10), 2);
     }
     //slow down motor if moving away from movement direction
     else {
-      setMotor(flipped * (max(throtCurrent - 200,0)), 1);
+      setMotor(flipped * (throtCurrent * 8 / 10), 1);
       setMotor(flipped * (throtCurrent), 2);
     }
   }
@@ -171,18 +187,18 @@ void meltMove() {
   }
 }
 
-void runMelty(Receiver r) {
-  getRadial(r);
+void runMelty() {
+  getRadial();
   //receiveTelemetry();
 
   //run melty if throttle is high enough
-  if (throtCurrent >= throtMin) {
+  if (throt >= throtMin) {
     getAngle();
     meltLights();
     meltMove();
   }
   //throttle too low for translation, shut off motor
   else { 
-    drive(r);
+    drive();
   }
 }

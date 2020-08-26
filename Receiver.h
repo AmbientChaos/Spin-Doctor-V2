@@ -1,15 +1,12 @@
 #include <CPPM-RX.h>
 
-class Receiver {
-  public:
-    bool newInput = false;
-    uint16_t throt = 0;
-    uint16_t rudd = 500;
-    uint16_t elev = 500;
-    uint16_t ailer = 500;
-    uint16_t gear = 500;
-    uint16_t flap = 500;
-};
+bool newInput = false;
+uint16_t throt = 0;
+uint16_t rudd = 500;
+uint16_t elev = 500;
+uint16_t ailer = 500;
+uint16_t gear = 500;
+uint16_t flap = 500;
 
 //limit throttle pulse widths to 1000-2000us
    
@@ -43,18 +40,18 @@ int volatile return_FLAP()
     return max(1000, min(2000, RC_AUX1));
 }
 
-void readReceiver(Receiver r)
+void readReceiver()
 {
   noInterrupts();
-  r.newInput = true;
+  newInput = true;
   
   //get receiver inputs as a percentage of max (assuming 1000-2000 us pulse range)
-  r.throt = (return_THROT()-1000);
-  r.rudd = (return_RUDD()-1000);
-  r.elev = (return_ELEV()-1000);
-  r.ailer = (return_AILER()-1000);
-  r.gear = (return_GEAR()-1000);
-  r.flap = (return_FLAP()-1000);
+  throt = (return_THROT()-1000);
+  rudd = (return_RUDD()-1000);
+  elev = (return_ELEV()-1000);
+  ailer = (return_AILER()-1000);
+  gear = (return_GEAR()-1000);
+  flap = (return_FLAP()-1000);
   interrupts();
 }
 

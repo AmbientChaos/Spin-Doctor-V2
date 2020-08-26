@@ -98,8 +98,8 @@ void setupDshotDMA(void){
 }
 
 uint8_t getDshotChecksum(uint16_t value){
-  static uint8_t checksum = 0;
-  for (static uint8_t i = 0; i < 3; i++) {
+  uint8_t checksum = 0;
+  for (uint8_t i = 0; i < 3; i++) {
     checksum ^=  value;
     value >>= 4;
   }
@@ -110,14 +110,14 @@ uint8_t getDshotChecksum(uint16_t value){
 
 void fillDshotBuffer(uint16_t value){
   //memset(dshotCommandBuffer, 0, DSHOT_BUFFER_LENGTH); //Empty DMA buffer
-  for(static int i=0; i<DSHOT_COMMAND_LENGTH; i++){ // scan all the bits in the packet
+  for(int i=0; i<DSHOT_COMMAND_LENGTH; i++){ // scan all the bits in the packet
     dshotCommandBuffer[15-i] = (bool)((1<<i)&value) ? (mod * DSHOT_1_TIMING) >> 8 : (mod * DSHOT_0_TIMING) >> 8; // pack buffer MSB first
   }
 }
 
-void dshotOut(uint16_t value, uint8_t motor = 1){
-  static uint16_t packet = 0;
-  static uint8_t checksum = 0;
+void dshotOut(uint16_t value, uint8_t motor = 1, bool telem = false){
+  uint16_t packet = 0;
+  uint8_t checksum = 0;
 
   if(motor == 1) {dma.destination(FTM0_C2V);} //set destination as ESC 1
   else if(motor == 2) {dma.destination(FTM0_C3V);} //set destination as ESC 2
@@ -129,10 +129,9 @@ void dshotOut(uint16_t value, uint8_t motor = 1){
   else if (value > 2047) {value = 2047;}
 
   packet = value << 1; //add telemetry bit (0)
-  packet = packet | (uint16_t) 1; //set telemetry bit to 1
+  if (value != 0) packet = packet | telem; //set telemetry bit
   checksum = getDshotChecksum(packet);
   packet = (packet<<4)|checksum;
-  
   fillDshotBuffer(packet);
   dma.enable();
 }
