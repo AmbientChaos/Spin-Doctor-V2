@@ -3,20 +3,20 @@
 
 //telemetry variables
 bool telemNew = true;
+bool telemProcessed = false;
 unsigned long telemNewTime = 0;
-const byte arraySize = 2; //2 for triangular integration
-unsigned long telemTime[arraySize] = {0}; //time between accelerometer measurements
-uint16_t degreePeriod[arraySize] = {0}; //period in microseconds per degree
+unsigned long telemTime[2] = {0}; //time between accelerometer measurements
+uint16_t degreePeriod[2] = {0}; //period in microseconds per degree
 int8_t mem = 0;
 int16_t periodOffset = 0;
 
-static uint8_t SerialBuf[10];
+uint8_t SerialBuf[10];
 uint8_t receivedBytes = 0;
 
 // Manually calibrated variables 
 const uint8_t wheelDiam = 35; // wheel diam in mm
 const uint8_t circleDiam = 60; // wheel circle diam in mm
-const uint8_t motorPoles = 7;
+const uint8_t motorPoles = 14;
 
 // 8-Bit CRC
 uint8_t update_crc8(uint8_t crc, uint8_t crc_seed){
@@ -54,6 +54,7 @@ void serialEvent1(){
     }
     if(receivedBytes > 9){ // transmission complete
       telemNew = true;
+      telemProcessed = false;
       telemNewTime = micros();
       break;
     }
@@ -64,22 +65,20 @@ void processTelemetry(){
   static uint16_t eRpm = 0;
   static uint16_t motorRpm = 0;
   static uint16_t ringRpm = 0;
-
-  telemNew = false;
+  telemProcessed = true;
+  receivedBytes = 0;
   
-  static uint8_t crc8 = get_crc8(SerialBuf, 9); // get the 8 bit CRC
-  if(crc8 != SerialBuf[9]){  // transmission failure
-    for (static int i = 0; i < 9; i++){SerialBuf[i] = SerialBuf[i+1];}
-    receivedBytes--;
-    return;
-  }
-
-  for(static int i=arraySize - 1; i>0; i--) { //shift old data down
-      telemTime[i] = telemTime[i-1];
-      degreePeriod[i] = degreePeriod[i-1];
-  }
+  // CRC8 check failing most of the time with CRC8 of 0, disabled
+  //static uint8_t crc = get_crc8(SerialBuf, 9); // get the 8 bit CRC
+  //if(crc != SerialBuf[9]) return; // transmission failure
+  
+  //shift old data down
+  telemTime[1] = telemTime[0];
+  degreePeriod[1] = degreePeriod[0];
+  
+  //record new data
   telemTime[0] = telemNewTime;
-  
+     
   // compute the received values
   /*ESC_telemetry[0] = SerialBuf[0]; // temperature
   ESC_telemetry[1] = (SerialBuf[1]<<8)|SerialBuf[2]; // voltage
@@ -92,6 +91,4 @@ void processTelemetry(){
   motorRpm = (uint32_t) eRpm * 100 / (motorPoles / 2);
   ringRpm = (uint32_t) motorRpm * wheelDiam / circleDiam;
   degreePeriod[0] = (55556 / ringRpm) * 3 + periodOffset; // convert from rev/min to usec/deg (in 16 bit integer math)
-  
-  receivedBytes = 0;
 }

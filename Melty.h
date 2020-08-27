@@ -7,7 +7,8 @@ uint16_t movementDirection = 0;
 uint16_t movementSpeed = 0;
 bool maxSpin = false;
 bool calibrating = false;
-uint16_t telemAngle[arraySize] = {0}; //current angle calculated from accelerometer
+uint16_t telemAngle[2] = {0}; //current angle calculated from accelerometer
+int8_t flipped = 1;
 
 //manually calibrated variables
 const uint16_t throtMin = 100; // minimum throttle to start spinning, out of 1000
@@ -37,7 +38,7 @@ void trimAngle() {
     trimTimer = millis();
     angleTrim = (rudd - 500) / 100;
   }
-  for (static int i = 0; i < arraySize; i++) {
+  for (static int i = 0; i < 2; i++) {
     telemAngle[i] = (telemAngle[i] + 360 + angleTrim) % 360;
   }
 }
@@ -70,9 +71,7 @@ void getAngle() {
     telemNew = false;
     
     //shift old data down
-    for (static int i = 1; i < arraySize; i++) { 
-      telemAngle[i] = telemAngle[i - 1];
-    }
+    telemAngle[1] = telemAngle[0];
     
     //triangular integration from new data
     deltaT = telemTime[0] - telemTime[1];
@@ -98,13 +97,6 @@ void meltLights() {
   else {
     digitalWriteFast(GREEN, LOW);
   }
-  /*if ((currentAngle + 360 + lightOffset) % 360 <= 45 
-      || (currentAngle + 360 + lightOffset) % 360 >= 315) {
-    digitalWriteFast(RED, HIGH);
-  }
-  else {
-    digitalWriteFast(RED, LOW);
-  }*/
   //turn on red ligth if its position is in the stick direction
   if (movementSpeed > 50) {
     if ((currentAngle + 360 + lightOffset) % 360 <= (movementDirection + 30) % 360 
@@ -189,7 +181,6 @@ void meltMove() {
 
 void runMelty() {
   getRadial();
-  //receiveTelemetry();
 
   //run melty if throttle is high enough
   if (throt >= throtMin) {

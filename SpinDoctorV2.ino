@@ -1,4 +1,3 @@
-#include "Accelerometer.h"
 #include "DShot.h"
 #include "Melty.h"
 #include "Watchdog.h"
@@ -23,7 +22,6 @@
 #define STATE_CALIBRATE 5
 byte state = STATE_IDLE;
 byte prevState = STATE_IDLE;
-const bool useAccel = false;
 
 unsigned long blinkTimer = millis();
 bool blinkBlock = false;
@@ -32,7 +30,6 @@ bool blinkBlock = false;
 
 void setup() {
   StartCPPM(RX_CPPM);
-  if (useAccel) accelSetup();
   Serial1.begin(115200); // open Serial1 for ESC telemetry
   Serial1.clear();
   readCalibration();
@@ -52,7 +49,7 @@ void setup() {
   delay(100);
 
   //setup watchdog
-  //watchdogSetup();
+  watchdogSetup();
 
   state = STATE_IDLE;
 }
@@ -67,10 +64,7 @@ void loop() {
     stateChange();
   }
 
-  if (telemNew) processTelemetry();
-
-  //get any new accelerometer data
-  if (useAccel && accelNew) runAccel();
+  if (telemNew && !telemProcessed) processTelemetry();
 
   switch (state) {
     case STATE_IDLE:

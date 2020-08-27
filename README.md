@@ -2,17 +2,13 @@
 
 Attempt at a translational drift platform using only telemetry from the brushless ESCs for speed/location data
 
-**Accelerometer, receiver, and DShot components all tested and functioning, main program untested.**
+**Receiver, and ESC code components all tested and functioning, melty algorithms may not be fully functional yet.**
 
 Thanks to [@swallenhardware](https://github.com/swallenhardware) for providing his code and build log which helped make this possible
 
 ## External libraries used:
 
-[i2c_t3](https://github.com/nox771/i2c_t3)
-
 [CPPM-RX](https://github.com/daPhoosa/CPPM-RX)
-
-[bladeBench](https://github.com/Extent421/bladeBench) DShot routines, updated for dual motor control and motor off commands
 
 ## Hardware used:
 

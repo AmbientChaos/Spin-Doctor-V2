@@ -129,7 +129,7 @@ void dshotOut(uint16_t value, uint8_t motor = 1, bool telem = false){
   else if (value > 2047) {value = 2047;}
 
   packet = value << 1; //add telemetry bit (0)
-  if (value != 0) packet = packet | telem; //set telemetry bit
+  if (value != 0) packet |= telem; //set telemetry bit
   checksum = getDshotChecksum(packet);
   packet = (packet<<4)|checksum;
   fillDshotBuffer(packet);
