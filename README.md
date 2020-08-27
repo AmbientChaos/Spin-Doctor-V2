@@ -14,8 +14,6 @@ Thanks to [@swallenhardware](https://github.com/swallenhardware) for providing h
 
 Teensy 3.2 microcontroller
 
-SparkFun H3LIS331DL accelerometer (optional)
-
 6 channel CPPM receiver (and transmitter)
 
 DShot600 compatible ESC with telemetry pad
@@ -29,13 +27,13 @@ The gear and flap switches are used to determine the operating mode, with a safe
 
 **Gear:** *N/A* **Flaps:** *N/A* **Mode:** safe mode        **Lights:** Fast green flashing **Notes:** Signal loss or started in mode other than idle, motor off
 
-**Gear:** *off* **Flaps:** *off* **Mode:** drive mode       **Lights:** Solid green         **Notes:** Connected, drive mode
+**Gear:** *off* **Flaps:** *off* **Mode:** drive mode       **Lights:** Solid green         **Notes:** Connected, drive mode. Controlled by elevator and aileron channels
 	
-**Gear:** *off* **Flaps:** *on*  **Mode:** drive/melty mode **Lights:** Solid green and red **Notes:** Green and red lights indicate reference and movement directions respectively
+**Gear:** *off* **Flaps:** *on*  **Mode:** drive/melty mode **Lights:** Green heading	    **Notes:** Green and red lights indicate reference and movement directions respectively. Throttle for speed, rudder to adjust heading, and elevator/aileron for direction of movement
 
-**Gear:** *on*  **Flaps:** *off* **Mode:** unused	    **Lights:** NA	            **Notes:** NA
+**Gear:** *on*  **Flaps:** *off* **Mode:** calibration mode **Lights:** Red heading         **Notes:** Red lights indicate reference heading, rudder used to adjust timing to stabilize heading. Throttle for speed, rudder to adjust to stabilize heading
 
-**Gear:** *on*  **Flaps:** *on*  **Mode:** max spin mode    **Lights:** Flash green and red **Notes:** Only available while spinning in melty mode
+**Gear:** *on*  **Flaps:** *on*  **Mode:** max spin mode    **Lights:** Flash green and red **Notes:** Throttle to max, sacrificing control for power. Only available while spinning in melty mode, same controls
 
 #### Safe mode:
 Only entered before connecting and setting switches for idle mode and during signal loss.
@@ -63,8 +61,6 @@ Throttle controls throttle.
 Aileron makes bot strafe left and right.
 
 Elevator makes bot drive forward and backward.
-
-Accelerometer used to account for flipping.
 
 #### Max spin mode:
 

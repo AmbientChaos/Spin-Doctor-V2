@@ -20,6 +20,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.*/
 
+//DShot routines adapted from BladeBench repository (https://github.com/Extent421/bladeBench)
+
 #include "DMAChannel.h"
 
 #define DSHOT_COMMAND_LENGTH 16
@@ -40,24 +42,17 @@ SOFTWARE.*/
 #define FTM_SC_PRESCALE32     0x05
 #define FTM_SC_PRESCALE64     0x06
 #define FTM_SC_PRESCALE128    0x07
-
 #define FTM_SC_CLK_NONE       0x00
 #define FTM_SC_CLK_SYS        0x08
 #define FTM_SC_CLK_FIXED      0x10
 #define FTM_SC_CLK_EXT        0x18
-
 #define FTM_SC_COUNT_UP       0x00
 #define FTM_SC_COUNT_UPDOWN   0x20
-
 #define FTM_SC_IRQ            0x40
-
 #define FTM_SC_OVERFLOW_FLAG  0x80
-
 #define FTM_CSC_DMA           0x01
-
 #define FTM_CSC_PWM_EDGE_HI   0x28
 #define FTM_CSC_PWM_EDGE_LO   0x24
-
 #define FTM_CSC_IRQ           0x40
 #define FTM_CSC_OVERFLOW_FLAG 0x80
 
@@ -90,7 +85,6 @@ void setupDshotDMA(void){
   dma.transferSize(1);
   dma.transferCount(DSHOT_BUFFER_LENGTH);
   dma.disableOnCompletion();
-
   dma.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM0_CH1);
 
   FTM_PINCFG(ESC_1_PIN) = PORT_PCR_MUX(4) | PORT_PCR_DSE | PORT_PCR_SRE; //Configure pin for ESC 1 channel in alternate mode 4 - FTM0 channel 2
@@ -104,7 +98,6 @@ uint8_t getDshotChecksum(uint16_t value){
     value >>= 4;
   }
   checksum &= 0xf; // mask off the first nibble
-
   return checksum;
 }
 

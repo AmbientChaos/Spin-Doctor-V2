@@ -1,3 +1,21 @@
+/*SpinDoctor - Software for sensorless translational drift
+Copyright (C) 2020  AmbientChaos
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
+
+//Angle calculation algorithm derived from Halo codebase (https://github.com/swallenhardware/MeltyHalo)
+
 #include "Receiver.h"
 #include "Telemetry.h"
 
@@ -8,6 +26,7 @@ uint16_t movementSpeed = 0;
 bool maxSpin = false;
 bool calibrating = false;
 uint16_t telemAngle[2] = {0}; //current angle calculated from accelerometer
+uint16_t currentAngle = 0;
 int8_t flipped = 1;
 
 //manually calibrated variables
@@ -15,7 +34,7 @@ const uint16_t throtMin = 100; // minimum throttle to start spinning, out of 100
 const uint16_t throtMax = 300; // maximum throttle for melty mode, out of 1000
 const uint16_t lightOffset = 45; //angle between lights and "front", which is 90 deg offset from the motor axle
 
-uint16_t currentAngle = 0;
+//timers
 unsigned long lastMotor1Send = micros();
 unsigned long lastMotor2Send = micros();
 unsigned long telemDelay = micros();
@@ -67,19 +86,14 @@ void getAngle() {
   //triangular integration calculations borrowed from Halo
   static uint16_t deltaT;
   //calculate angle from new telem data
-  if (telemNew) { 
+  if (telemNew) { //if new telemetry, triangular integration from new data
     telemNew = false;
-    
-    //shift old data down
-    telemAngle[1] = telemAngle[0];
-    
-    //triangular integration from new data
+    telemAngle[1] = telemAngle[0]; //shift old data down
     deltaT = telemTime[0] - telemTime[1];
     telemAngle[0] = (telemAngle[1] + (deltaT / degreePeriod[0] + deltaT / degreePeriod[1]) / 2) % 360;
     currentAngle = telemAngle[0];
   }
-  //predict the angle between telem readings by extrapolating from old data
-  else { 
+  else { //if no new telemetry, predict the angle between telem readings by extrapolating from old data
     static uint16_t newTime = micros();
     static uint16_t periodPredicted = degreePeriod[1] + (newTime - telemTime[1]) * (degreePeriod[0] - degreePeriod[1]) / (telemTime[0] - telemTime[1]);
     //predict the current robot heading by triangular integration up to the extrapolated point

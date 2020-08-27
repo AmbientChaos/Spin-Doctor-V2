@@ -1,3 +1,19 @@
+/*SpinDoctor - Software for sensorless translational drift
+Copyright (C) 2020  AmbientChaos
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
+
 #include "DShot.h"
 #include "Melty.h"
 #include "Watchdog.h"
@@ -57,14 +73,12 @@ void setup() {
 void loop() {
   feedWatchdog();
 
-  //check for new receiver inputs
-  if (Aux1New()){
+  if (Aux1New()){ //check for new receiver inputs
     readReceiver();
-    //check for state changes
-    stateChange();
+    stateChange(); //check for state changes
   }
 
-  if (telemNew && !telemProcessed) processTelemetry();
+  if (telemNew && !telemProcessed) processTelemetry(); // check for new ESC telemetry
 
   switch (state) {
     case STATE_IDLE:
@@ -94,7 +108,8 @@ void loop() {
       break;
     
     case STATE_MELTY:
-      //both red and green LED solid while not spinning to show melty mode
+      //green light indicates 0 degree heading/forward
+      //red light indicates commanded direction of travel
       maxSpin = false;
       calibrating = false;
       runMelty();
@@ -132,7 +147,7 @@ void loop() {
 }
 
 void stateChange() {
-  //check switches to determine program state to transition to
+  //check switches and throttle to determine program state to transition to
   prevState = state;
   //safe state if transmitter connection is lost
   if (signalLost()) state = STATE_IDLE;

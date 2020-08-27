@@ -1,4 +1,19 @@
-//EEPROM library for saving calibration variables
+/*SpinDoctor - Software for sensorless translational drift
+Copyright (C) 2020  AmbientChaos
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
+
 #include <EEPROM.h>
 
 //telemetry variables
@@ -7,11 +22,10 @@ bool telemProcessed = false;
 unsigned long telemNewTime = 0;
 unsigned long telemTime[2] = {0}; //time between accelerometer measurements
 uint16_t degreePeriod[2] = {0}; //period in microseconds per degree
-int8_t mem = 0;
-int16_t periodOffset = 0;
-
 uint8_t SerialBuf[10];
 uint8_t receivedBytes = 0;
+int8_t mem = 0;
+int16_t periodOffset = 0;
 
 // Manually calibrated variables 
 const uint8_t wheelDiam = 35; // wheel diam in mm
