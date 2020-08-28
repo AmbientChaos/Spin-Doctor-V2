@@ -24,11 +24,11 @@ unsigned long telemTime[2] = {0}; //time between accelerometer measurements
 uint16_t degreePeriod[2] = {0}; //period in microseconds per degree
 uint8_t SerialBuf[10];
 uint8_t receivedBytes = 0;
-int8_t mem = 0;
+int8_t mem = 42;
 int16_t periodOffset = 0;
 
 // Manually calibrated variables 
-const uint8_t wheelDiam = 35; // wheel diam in mm
+const uint8_t wheelDiam = 41; // wheel diam in mm
 const uint8_t circleDiam = 60; // wheel circle diam in mm
 const uint8_t motorPoles = 14;
 

@@ -110,6 +110,10 @@ void loop() {
     case STATE_MELTY:
       //green light indicates 0 degree heading/forward
       //red light indicates commanded direction of travel
+      if (throt < 150) { // drive mode if throttle is off
+        drive();
+        break;
+      }
       maxSpin = false;
       calibrating = false;
       runMelty();
@@ -138,7 +142,6 @@ void loop() {
       elev = 500;
       runMelty();
       digitalWriteFast(RED, digitalReadFast(GREEN));
-      digitalWriteFast(GREEN, LOW);
       break;
 
     default:
@@ -153,10 +156,8 @@ void stateChange() {
   if (signalLost()) state = STATE_IDLE;
   //drive if both switches off
   else if (flap < 450 && gear < 450) state = STATE_DRIVE;
-  //drive if flap switch is on but throttle is down
-  else if (flap > 550 && gear < 450 && throt < 150 && prevState != STATE_IDLE) state = STATE_DRIVE;
   //melty if flap switch is on and throttle is up
-  else if (flap > 550 && gear < 450 && throt >= 150) state = STATE_MELTY;
+  else if (flap > 550 && gear < 450) state = STATE_MELTY;
   //max spin if both switches on
   else if (flap > 550 && gear > 550) state = STATE_MAX_SPIN;
   //calibrate mode if gear switch is on
@@ -183,4 +184,5 @@ void stateChange() {
     if (state == STATE_DRIVE || state == STATE_IDLE) writeCalibration();
     else state = STATE_MAX_SPIN;
   }
+  else if (state == STATE_CALIBRATE && elev >= 850) periodOffset = 0;
 }

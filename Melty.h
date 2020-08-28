@@ -31,7 +31,7 @@ int8_t flipped = 1;
 
 //manually calibrated variables
 const uint16_t throtMin = 100; // minimum throttle to start spinning, out of 1000
-const uint16_t throtMax = 300; // maximum throttle for melty mode, out of 1000
+const uint16_t throtMax = 500; // maximum throttle for melty mode, out of 1000
 const uint16_t lightOffset = 45; //angle between lights and "front", which is 90 deg offset from the motor axle
 
 //timers
@@ -93,19 +93,20 @@ void getAngle() {
     telemAngle[0] = (telemAngle[1] + (deltaT / degreePeriod[0] + deltaT / degreePeriod[1]) / 2) % 360;
     currentAngle = telemAngle[0];
   }
-  else { //if no new telemetry, predict the angle between telem readings by extrapolating from old data
+  /*else { //if no new telemetry, predict the angle between telem readings by extrapolating from old data
     static uint16_t newTime = micros();
     static uint16_t periodPredicted = degreePeriod[1] + (newTime - telemTime[1]) * (degreePeriod[0] - degreePeriod[1]) / (telemTime[0] - telemTime[1]);
     //predict the current robot heading by triangular integration up to the extrapolated point
     deltaT = newTime - telemTime[0];
     currentAngle = (telemAngle[0] + (deltaT / periodPredicted + deltaT / degreePeriod[0]) / 2) % 360;
-  }
+  }*/
 }
 
 void meltLights() {
+  static uint16_t lightPosition;
+  lightPosition = (currentAngle + 360 + lightOffset) % 360;
   //turn on green light if it's position is "forward"
-  if ((currentAngle + 360 + lightOffset) % 360 <= 30 
-      || (currentAngle + 360 + lightOffset) % 360 >= 330) {
+  if (lightPosition <= 30 || lightPosition >= 330) {
     digitalWriteFast(GREEN, HIGH);
   }
   else {
@@ -113,13 +114,15 @@ void meltLights() {
   }
   //turn on red ligth if its position is in the stick direction
   if (movementSpeed > 50) {
-    if ((currentAngle + 360 + lightOffset) % 360 <= (movementDirection + 30) % 360 
-        || (currentAngle + 360 + lightOffset) % 360 >= (movementDirection - 30) % 360) {
+    if (lightPosition <= (movementDirection + 360 + 30) % 360 || lightPosition >= (movementDirection + 360 - 30) % 360) {
       digitalWriteFast(RED, HIGH);
     }
     else {
       digitalWriteFast(RED, LOW);
     }
+  }
+  else {
+    digitalWriteFast(RED, LOW);
   }
 }
 
